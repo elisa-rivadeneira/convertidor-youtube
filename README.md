@@ -42,6 +42,20 @@ brew install ffmpeg
 
 ## Uso
 
+### Opción 1: Con Docker (Recomendado)
+
+1. Construir y ejecutar con Docker Compose:
+```bash
+docker-compose up -d
+```
+
+2. Abrir en el navegador:
+```
+http://localhost:5000
+```
+
+### Opción 2: Sin Docker
+
 1. Iniciar el servidor:
 ```bash
 python3 app.py

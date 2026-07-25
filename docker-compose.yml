@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  youtube-downloader:
+    build: .
+    container_name: youtube-downloader
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./download_log.txt:/app/download_log.txt
+    restart: unless-stopped
