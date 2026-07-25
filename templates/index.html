@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descargador de YouTube</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .format-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .format-btn {
+            padding: 10px 30px;
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .format-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .format-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.downloading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status.completed {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .download-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .download-link:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📹 Descargador de YouTube</h1>
+
+        <div class="format-selector">
+            <button class="format-btn active" onclick="selectFormat('video')" id="videoBtn">
+                🎬 Video MP4
+            </button>
+            <button class="format-btn" onclick="selectFormat('audio')" id="audioBtn">
+                🎵 Audio MP3
+            </button>
+        </div>
+
+        <div class="input-group">
+            <input
+                type="text"
+                id="urlInput"
+                placeholder="Pega aquí la URL de YouTube..."
+            >
+            <button id="downloadBtn" onclick="startDownload()">Descargar</button>
+        </div>
+
+        <div id="status" class="status">
+            <div id="statusText"></div>
+            <div id="progressBar" class="progress-bar">
+                <div id="progressBarFill" class="progress-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDownloadId = null;
+        let statusInterval = null;
+        let selectedFormat = 'video';
+
+        function selectFormat(format) {
+            selectedFormat = format;
+            document.getElementById('videoBtn').classList.remove('active');
+            document.getElementById('audioBtn').classList.remove('active');
+
+            if (format === 'video') {
+                document.getElementById('videoBtn').classList.add('active');
+            } else {
+                document.getElementById('audioBtn').classList.add('active');
+            }
+        }
+
+        function startDownload() {
+            const url = document.getElementById('urlInput').value.trim();
+
+            if (!url) {
+                showStatus('Por favor ingresa una URL', 'error');
+                return;
+            }
+
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = 'Descargando...';
+
+            fetch('/download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: url, format: selectedFormat })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showStatus('Error: ' + data.error, 'error');
+                    resetButton();
+                } else {
+                    currentDownloadId = data.download_id;
+                    checkStatus();
+                }
+            })
+            .catch(error => {
+                showStatus('Error de conexión: ' + error, 'error');
+                resetButton();
+            });
+        }
+
+        function checkStatus() {
+            if (!currentDownloadId) return;
+
+            statusInterval = setInterval(() => {
+                fetch(`/status/${currentDownloadId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'downloading') {
+                            showStatus('Descargando... ' + (data.progress || ''), 'downloading');
+                            document.getElementById('progressBar').classList.add('show');
+                        } else if (data.status === 'completed') {
+                            clearInterval(statusInterval);
+                            showStatus(
+                                `¡Descarga completada! <a href="/download-file/${currentDownloadId}" class="download-link">Descargar archivo</a>`,
+                                'completed'
+                            );
+                            document.getElementById('progressBar').classList.remove('show');
+                            resetButton();
+                        } else if (data.status === 'error') {
+                            clearInterval(statusInterval);
+                            showStatus('Error: ' + data.error, 'error');
+                            resetButton();
+                        }
+                    })
+                    .catch(error => {
+                        clearInterval(statusInterval);
+                        showStatus('Error al verificar estado', 'error');
+                        resetButton();
+                    });
+            }, 1000);
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+
+            statusDiv.className = 'status show ' + type;
+            statusText.innerHTML = message;
+        }
+
+        function resetButton() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = 'Descargar';
+        }
+
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startDownload();
+            }
+        });
+    </script>
+</body>
+</html>

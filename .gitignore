@@ -1,0 +1,9 @@
+downloads/
+download_log.txt
+*.pyc
+__pycache__/
+.env
+venv/
+*.mp4
+*.mp3
+*.log
